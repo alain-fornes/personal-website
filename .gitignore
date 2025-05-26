@@ -1,2 +1,19 @@
+# Runtime & system files
+.DS_Store
+.env
+.env.local
+.env.production
+*.log
+
+# Build outputs
+.next/
+out/
+dist/
+
+# Node dependencies
 node_modules/
-node_modules/
+
+# Misc
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
