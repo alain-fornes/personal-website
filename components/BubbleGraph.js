@@ -6,11 +6,11 @@ const BubbleGraph = ({ data }) => {
   const ref = useRef();
   const router = useRouter();
 
-  // Beige color
-  const beigeColor = '#000000';
+  // circle color
+  const circleColor = '#000000';
 
   // Store colors in a map for reference
-  const colorMap = new Map(data.nodes.map((node, i) => [node.id, beigeColor]));
+  const colorMap = new Map(data.nodes.map((node, i) => [node.id, circleColor]));
 
   useEffect(() => {
     // Get dynamic dimensions based on window size
@@ -42,18 +42,12 @@ const BubbleGraph = ({ data }) => {
       .force('collision', d3.forceCollide().radius(d => d.radius + 20))
       .force('x', d3.forceX(width / 2).strength(0.02))
       .force('y', d3.forceY(height / 2).strength(0.02))
-      .alphaDecay(0.01)
-      .velocityDecay(0.4)
+      .alphaDecay(0.05) // Faster decay to stop simulation sooner
+      .velocityDecay(0.6) // Higher decay for less movement
       .on('tick', ticked);
 
-    let animationFrame;
-    let time = 0;
-    const animate = () => {
-      time += 0.016;
-      simulation.tick();
-      animationFrame = requestAnimationFrame(animate);
-    };
-    animationFrame = requestAnimationFrame(animate);
+    // Remove continuous animation loop - let D3 handle its own timing
+    // The simulation will naturally slow down and stop
 
     const node = g.selectAll('g')
       .data(data.nodes)
@@ -71,7 +65,7 @@ const BubbleGraph = ({ data }) => {
     // Add main bubble circle
     node.append('circle')
       .attr('r', d => d.radius)
-      .attr('fill', beigeColor)
+      .attr('fill', circleColor)
       .attr('opacity', 0.9)
       .style('transition', 'all 0.2s ease')
       .style('filter', 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))');
@@ -93,7 +87,7 @@ const BubbleGraph = ({ data }) => {
 
     // Add hover effects
     node.each(function(d, i) {
-      const originalColor = beigeColor;
+      const originalColor = circleColor;
       
       d3.select(this)
         .on('mouseover', function() {
@@ -109,15 +103,11 @@ const BubbleGraph = ({ data }) => {
     });
 
     function ticked() {
+      // Removed bobbing animation - static positioning for better performance
       node.attr('transform', d => {
-        const bobAmount = 2;
-        const bobSpeed = 2;
-        const bobOffset = d.id.charCodeAt(0) * 0.1;
-        const bob = Math.sin(time * bobSpeed + bobOffset) * bobAmount;
-        
         const padding = d.radius + 10;
         const x = Math.max(padding, Math.min(width - padding, d.x));
-        const y = Math.max(padding, Math.min(height - padding, d.y + bob));
+        const y = Math.max(padding, Math.min(height - padding, d.y));
         
         return `translate(${x},${y})`;
       });
@@ -180,9 +170,10 @@ const BubbleGraph = ({ data }) => {
     window.addEventListener('resize', handleResize);
 
     return () => {
-      simulation.stop();
-      cancelAnimationFrame(animationFrame);
-      window.removeEventListener('resize', handleResize);
+      // Cleanup when component unmounts (leaving the page)
+      simulation.stop(); // Stop D3 force simulation
+      window.removeEventListener('resize', handleResize); // Remove event listener
+      console.log('BubbleGraph cleanup completed - simulation stopped')
     };
   }, [data, router, colorMap]);
 
