@@ -1,10 +1,7 @@
-// Temporarily disabled for deployment
-// import { updateSession } from './utils/supabase/middleware'
+import { updateSession } from './utils/supabase/middleware'
 
 export async function middleware(request) {
-  // Temporarily disabled - just pass through
-  return
-  // return await updateSession(request)
+  return await updateSession(request)
 }
 
 export const config = {
