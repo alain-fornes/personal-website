@@ -1,7 +1,10 @@
-import { updateSession } from './utils/supabase/middleware'
+// Middleware disabled - causing deployment issues
+// We can add it back later when needed for auth features
+// import { updateSession } from './utils/supabase/middleware'
 
 export async function middleware(request) {
-  return await updateSession(request)
+  // Disabled - just pass through all requests
+  return
 }
 
 export const config = {
