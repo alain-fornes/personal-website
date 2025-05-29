@@ -84,6 +84,74 @@ export default function SWEPage() {
     loadKnowledgeData() // Refresh to get updated metrics
   }
 
+  const handleDeleteNode = async (nodeId, nodeTitle) => {
+    if (!confirm(`Are you sure you want to delete "${nodeTitle}" and ALL its content? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      setLoading(true)
+      
+      // Delete in the correct order to respect foreign key constraints
+      // 1. Delete blog content
+      const { error: blogError } = await supabase
+        .from('blog_content')
+        .delete()
+        .eq('node_id', nodeId)
+
+      if (blogError) throw blogError
+
+      // 2. Delete node connections (both directions)
+      const { error: connectionsError } = await supabase
+        .from('node_connections')
+        .delete()
+        .or(`from_node_id.eq.${nodeId},to_node_id.eq.${nodeId}`)
+
+      if (connectionsError) throw connectionsError
+
+      // 3. Delete project associations
+      const { error: projectNodesError } = await supabase
+        .from('project_nodes')
+        .delete()
+        .eq('node_id', nodeId)
+
+      if (projectNodesError) throw projectNodesError
+
+      // 4. Delete learning progress
+      const { error: learningError } = await supabase
+        .from('learning_progress')
+        .delete()
+        .eq('node_id', nodeId)
+
+      if (learningError) throw learningError
+
+      // 5. Finally delete the knowledge node itself
+      const { error: nodeError } = await supabase
+        .from('knowledge_nodes')
+        .delete()
+        .eq('id', nodeId)
+
+      if (nodeError) throw nodeError
+
+      console.log(`Successfully deleted node "${nodeTitle}" and all its content`)
+      
+      // Refresh the data
+      await loadKnowledgeData()
+      
+      // If we were viewing the deleted node, clear the selection
+      if (selectedNode?.id === nodeId) {
+        setSelectedNode(null)
+        setViewMode('network')
+      }
+
+    } catch (error) {
+      console.error('Error deleting node:', error)
+      alert(`Failed to delete node: ${error.message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -177,6 +245,7 @@ export default function SWEPage() {
             selectedNode={selectedNode}
             onNodeSelect={setSelectedNode}
             onEditContent={handleEditContent}
+            onDeleteNode={handleDeleteNode}
             isAuthenticated={isAuthenticated}
           />
         )}
@@ -186,6 +255,7 @@ export default function SWEPage() {
             nodes={knowledgeNodes}
             connections={connections}
             onRefresh={loadKnowledgeData}
+            onDeleteNode={handleDeleteNode}
           />
         )}
       </div>
@@ -210,7 +280,7 @@ export default function SWEPage() {
 }
 
 // Content View Component
-function ContentView({ nodes, selectedNode, onNodeSelect, onEditContent, isAuthenticated }) {
+function ContentView({ nodes, selectedNode, onNodeSelect, onEditContent, onDeleteNode, isAuthenticated }) {
   const [blogPosts, setBlogPosts] = useState([])
   const [loading, setLoading] = useState(false)
   const supabase = createClient(
@@ -290,12 +360,21 @@ function ContentView({ nodes, selectedNode, onNodeSelect, onEditContent, isAuthe
                 <p className="text-gray-400 mt-2">{selectedNode.description}</p>
               </div>
               {isAuthenticated && (
-                <button
-                  onClick={() => onEditContent(selectedNode)}
-                  className="px-4 py-2 bg-blue-500 bg-opacity-20 border border-blue-400 border-opacity-30 rounded-lg hover:bg-opacity-30 transition-all duration-200"
-                >
-                  + Add Content
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => onEditContent(selectedNode)}
+                    className="px-4 py-2 bg-blue-500 bg-opacity-20 border border-blue-400 border-opacity-30 rounded-lg hover:bg-opacity-30 transition-all duration-200"
+                  >
+                    + Add Content
+                  </button>
+                  <button
+                    onClick={() => onDeleteNode(selectedNode.id, selectedNode.title)}
+                    className="px-4 py-2 bg-red-500 bg-opacity-20 border border-red-400 border-opacity-30 rounded-lg hover:bg-opacity-30 transition-all duration-200 text-red-300 hover:text-red-200"
+                    title={`Delete ${selectedNode.title}`}
+                  >
+                    Delete
+                  </button>
+                </div>
               )}
             </div>
 
@@ -357,7 +436,7 @@ function ContentView({ nodes, selectedNode, onNodeSelect, onEditContent, isAuthe
 }
 
 // Manage View Component
-function ManageView({ nodes, connections, onRefresh }) {
+function ManageView({ nodes, connections, onRefresh, onDeleteNode }) {
   const [stats, setStats] = useState({
     totalNodes: 0,
     totalConnections: 0,
@@ -441,6 +520,7 @@ function ManageView({ nodes, connections, onRefresh }) {
                 <th className="text-left py-3">Experience</th>
                 <th className="text-left py-3">Posts</th>
                 <th className="text-left py-3">Created</th>
+                <th className="text-left py-3">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -452,6 +532,15 @@ function ManageView({ nodes, connections, onRefresh }) {
                   <td className="py-3">{node.blog_post_count}</td>
                   <td className="py-3 text-gray-400">
                     {new Date(node.created_at).toLocaleDateString()}
+                  </td>
+                  <td className="py-3">
+                    <button
+                      onClick={() => onDeleteNode(node.id, node.title)}
+                      className="px-3 py-1 bg-red-500 bg-opacity-20 border border-red-400 border-opacity-30 rounded text-red-300 hover:bg-opacity-30 hover:text-red-200 transition-all duration-200 text-sm"
+                      title={`Delete ${node.title}`}
+                    >
+                      Delete
+                    </button>
                   </td>
                 </tr>
               ))}

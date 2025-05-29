@@ -94,7 +94,6 @@ const KnowledgeNetwork = ({ nodes, connections, onNodeSelect, isAuthenticated })
       .style('font-size', d => Math.max(10, d.radius / 3) + 'px')
       .style('font-weight', '600')
       .style('pointer-events', 'none')
-      .style('text-shadow', '2px 2px 4px rgba(0,0,0,0.8)')
 
     // Add experience level indicators
     nodeGroup.append('text')
@@ -215,17 +214,6 @@ const KnowledgeNetwork = ({ nodes, connections, onNodeSelect, isAuthenticated })
 
   return (
     <div className="relative w-full h-full bg-black">
-      {/* Legend */}
-      <div className="absolute top-4 right-4 bg-black bg-opacity-80 p-4 rounded-lg border border-white border-opacity-20 z-10">
-        <h4 className="text-white font-semibold mb-2">Legend</h4>
-        <div className="space-y-1 text-sm text-gray-300">
-          <div>• Larger nodes = More experience</div>
-          <div>• Ring thickness = Experience level</div>
-          <div>• Numbers show content count</div>
-          <div>• Click nodes to view content</div>
-        </div>
-      </div>
-
       {/* Instructions for empty state */}
       {nodes.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center pt-24">
