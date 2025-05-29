@@ -108,7 +108,7 @@ export default function EarthPage() {
         
         // Clear the DOM container completely
         if (globeRef.current) {
-          globeRef.current.innerHTML = ''
+        globeRef.current.innerHTML = ''
         }
         
         console.log('Earth page cleanup completed - all processes stopped')
