@@ -15,18 +15,29 @@ export default function SWEPage() {
   const [showNodeCreator, setShowNodeCreator] = useState(false)
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState('network') // 'network', 'content', 'manage'
+  const [supabase, setSupabase] = useState(null)
   
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  )
+  // Initialize Supabase client only on the client side
+  useEffect(() => {
+    if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      const client = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      )
+      setSupabase(client)
+    }
+  }, [])
 
   // Load knowledge nodes and connections
   useEffect(() => {
-    loadKnowledgeData()
-  }, [])
+    if (supabase) {
+      loadKnowledgeData()
+    }
+  }, [supabase])
 
   const loadKnowledgeData = async () => {
+    if (!supabase) return
+    
     try {
       setLoading(true)
       
@@ -85,6 +96,8 @@ export default function SWEPage() {
   }
 
   const handleDeleteNode = async (nodeId, nodeTitle) => {
+    if (!supabase) return
+    
     if (!confirm(`Are you sure you want to delete "${nodeTitle}" and ALL its content? This action cannot be undone.`)) {
       return
     }
@@ -156,6 +169,18 @@ export default function SWEPage() {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-white text-xl">Loading knowledge network...</div>
+      </div>
+    )
+  }
+
+  // Show error if Supabase is not configured
+  if (!supabase) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center text-white">
+          <h2 className="text-2xl font-bold mb-4">Configuration Required</h2>
+          <p className="text-gray-400">Supabase environment variables are not configured.</p>
+        </div>
       </div>
     )
   }
@@ -246,6 +271,7 @@ export default function SWEPage() {
             onNodeSelect={setSelectedNode}
             onEditContent={handleEditContent}
             onDeleteNode={handleDeleteNode}
+            supabase={supabase}
             isAuthenticated={isAuthenticated}
           />
         )}
@@ -256,6 +282,7 @@ export default function SWEPage() {
             connections={connections}
             onRefresh={loadKnowledgeData}
             onDeleteNode={handleDeleteNode}
+            supabase={supabase}
           />
         )}
       </div>
@@ -280,21 +307,19 @@ export default function SWEPage() {
 }
 
 // Content View Component
-function ContentView({ nodes, selectedNode, onNodeSelect, onEditContent, onDeleteNode, isAuthenticated }) {
+function ContentView({ nodes, selectedNode, onNodeSelect, onEditContent, onDeleteNode, supabase, isAuthenticated }) {
   const [blogPosts, setBlogPosts] = useState([])
   const [loading, setLoading] = useState(false)
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  )
 
   useEffect(() => {
-    if (selectedNode) {
+    if (selectedNode && supabase) {
       loadBlogPosts(selectedNode.id)
     }
-  }, [selectedNode])
+  }, [selectedNode, supabase])
 
   const loadBlogPosts = async (nodeId) => {
+    if (!supabase) return
+    
     try {
       setLoading(true)
       const { data, error } = await supabase
@@ -436,7 +461,7 @@ function ContentView({ nodes, selectedNode, onNodeSelect, onEditContent, onDelet
 }
 
 // Manage View Component
-function ManageView({ nodes, connections, onRefresh, onDeleteNode }) {
+function ManageView({ nodes, connections, onRefresh, onDeleteNode, supabase }) {
   const [stats, setStats] = useState({
     totalNodes: 0,
     totalConnections: 0,
@@ -445,14 +470,13 @@ function ManageView({ nodes, connections, onRefresh, onDeleteNode }) {
   })
 
   useEffect(() => {
-    calculateStats()
-  }, [nodes, connections])
+    if (supabase) {
+      calculateStats()
+    }
+  }, [nodes, connections, supabase])
 
   const calculateStats = async () => {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    )
+    if (!supabase) return
     
     try {
       const { data: blogPosts } = await supabase

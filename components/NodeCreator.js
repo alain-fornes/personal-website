@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
 const NodeCreator = ({ onClose, onNodeCreated }) => {
@@ -12,11 +12,18 @@ const NodeCreator = ({ onClose, onNodeCreated }) => {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [supabase, setSupabase] = useState(null)
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  )
+  // Initialize Supabase client only on the client side
+  useEffect(() => {
+    if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      const client = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      )
+      setSupabase(client)
+    }
+  }, [])
 
   const categories = [
     { value: 'programming', label: 'Programming Languages', color: '#3B82F6' },
@@ -33,6 +40,12 @@ const NodeCreator = ({ onClose, onNodeCreated }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    if (!supabase) {
+      setError('Database connection not available')
+      return
+    }
+    
     setLoading(true)
     setError('')
 

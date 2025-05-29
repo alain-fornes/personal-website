@@ -15,17 +15,28 @@ const ContentEditor = ({ node, onClose, onContentSaved }) => {
   const [previewMode, setPreviewMode] = useState(false)
   const [existingPosts, setExistingPosts] = useState([])
   const [editingPost, setEditingPost] = useState(null)
+  const [supabase, setSupabase] = useState(null)
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  )
+  // Initialize Supabase client only on the client side
+  useEffect(() => {
+    if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      const client = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      )
+      setSupabase(client)
+    }
+  }, [])
 
   useEffect(() => {
-    loadExistingPosts()
-  }, [node])
+    if (node && supabase) {
+      loadExistingPosts()
+    }
+  }, [node, supabase])
 
   const loadExistingPosts = async () => {
+    if (!supabase) return
+    
     try {
       const { data, error } = await supabase
         .from('blog_content')
@@ -42,6 +53,12 @@ const ContentEditor = ({ node, onClose, onContentSaved }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    if (!supabase) {
+      setError('Database connection not available')
+      return
+    }
+    
     setLoading(true)
     setError('')
 
@@ -137,6 +154,8 @@ const ContentEditor = ({ node, onClose, onContentSaved }) => {
   }
 
   const handleDeletePost = async (postId) => {
+    if (!supabase) return
+    
     if (!confirm('Are you sure you want to delete this post?')) return
 
     try {
