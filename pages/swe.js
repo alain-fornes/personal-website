@@ -25,6 +25,9 @@ export default function SWEPage() {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
       )
       setSupabase(client)
+    } else {
+      // If we can't initialize Supabase, stop loading
+      setLoading(false)
     }
   }, [])
 
@@ -165,7 +168,7 @@ export default function SWEPage() {
     }
   }
 
-  if (loading) {
+  if (loading && supabase) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-white text-xl">Loading knowledge network...</div>
@@ -173,13 +176,19 @@ export default function SWEPage() {
     )
   }
 
-  // Show error if Supabase is not configured
-  if (!supabase) {
+  // Show error if Supabase is not configured (only after we've tried to initialize)
+  if (!loading && !supabase) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center text-white">
           <h2 className="text-2xl font-bold mb-4">Configuration Required</h2>
-          <p className="text-gray-400">Supabase environment variables are not configured.</p>
+          <p className="text-gray-400 mb-4">Supabase environment variables are not configured.</p>
+          <Link 
+            href="/" 
+            className="px-4 py-2 bg-white bg-opacity-10 backdrop-blur-sm rounded-lg border border-white border-opacity-20 hover:bg-opacity-20 transition-all duration-200"
+          >
+            ← Back to Home
+          </Link>
         </div>
       </div>
     )
